@@ -1,0 +1,198 @@
+<Configuration>
+    <Source>
+        <VolumeLetters>
+            <VolumeInformation>
+                <DriveName Value="C:&#x5C;"/>
+                <VolumeName Value=""/>
+                <SpaceAvailable Value="47876"/>
+                <TotalAvailable Value="76231"/>
+                <FileSystem Value="NTFS"/>
+                <IsDynamic Value="0"/>
+                <CanBeAltVolTarget Value="0"/>
+                <!--Disk Signature is a live data node only-->
+                <Signature Value="3694905869"/>
+            </VolumeInformation>
+            <VolumeInformation>
+                <DriveName Value="E:&#x5C;"/>
+                <VolumeName Value="NTFS disk"/>
+                <SpaceAvailable Value="10147"/>
+                <TotalAvailable Value="10205"/>
+                <FileSystem Value="NTFS"/>
+                <IsDynamic Value="-1"/>
+                <CanBeAltVolTarget Value="0"/>
+                <!--Disk Signature is a live data node only-->
+                <Signature Value="982162895"/>
+            </VolumeInformation>
+            <VolumeInformation>
+                <DriveName Value="F:&#x5C;"/>
+                <VolumeName Value="ReFS disk"/>
+                <SpaceAvailable Value="9406"/>
+                <TotalAvailable Value="10176"/>
+                <FileSystem Value="ReFS"/>
+                <IsDynamic Value="0"/>
+                <CanBeAltVolTarget Value="0"/>
+                <!--Disk Signature is a live data node only-->
+                <Signature Value="3164810469"/>
+            </VolumeInformation>
+        </VolumeLetters>
+        <MountPointDetails>
+            <MountPointInstance>
+                <VolumeName Value=""/>
+                <SizeInMB Value="76231"/>
+                <MountPoint Value="C:&#x5C;"/>
+            </MountPointInstance>
+            <MountPointInstance>
+                <VolumeName Value="ReFS disk"/>
+                <SizeInMB Value="10176"/>
+                <MountPoint Value="F:&#x5C;"/>
+            </MountPointInstance>
+            <MountPointInstance>
+                <VolumeName Value="NTFS disk"/>
+                <SizeInMB Value="10205"/>
+                <MountPoint Value="E:&#x5C;"/>
+            </MountPointInstance>
+        </MountPointDetails>
+        <WindowsVersion>
+            <Major Value="10"/>
+            <Minor Value="0"/>
+            <CSDVersion Value="0"/>
+            <CurrentBuildNumber Value="14393"/>
+            <IsServerCore Value="0"/>
+            <WindowsVersionString Value="2016"/>
+            <SystemDirectory Value="C:&#x5C;Windows&#x5C;system32"/>
+            <WindowsDirectory Value="C:&#x5C;Windows"/>
+            <ProfilesDirectory Value="C:&#x5C;Users"/>
+            <ProgramData Value="C:&#x5C;ProgramData"/>
+            <ProgramFiles Value="C:&#x5C;Program Files"/>
+            <ProgramFilesX64 Value="C:&#x5C;Program Files (x86)"/>
+            <CommonFiles Value="C:&#x5C;Program Files&#x5C;Common Files"/>
+            <CommonFilesX64 Value="C:&#x5C;Program Files (x86)&#x5C;Common Files"/>
+            <DoubleTake Value="C:&#x5C;Program Files&#x5C;Carbonite&#x5C;Replication"/>
+            <BootDirectory Value="C:&#x5C;"/>
+            <ProductType Value="7"/>
+            <InstallationType Value="Server"/>
+            <WindowsVolume Value="C:&#x5C;"/>
+            <ProductSuite Value="16"/>
+            <BackOffice Value="0"/>
+            <Blade Value="0"/>
+            <DataCenter Value="0"/>
+            <Enterprise Value="0"/>
+            <EmbeddedNT Value="0"/>
+            <Personal Value="0"/>
+            <SingleUserTS Value="0"/>
+            <SmallBusiness Value="0"/>
+            <SmallBusinessRestricted Value="0"/>
+            <StorageServer Value="0"/>
+            <Terminal Value="-1"/>
+            <Cluster Value="0"/>
+            <InstallLocale Value="00000409"/>
+            <CurrentLocale Value="00000409"/>
+            <HAL>
+                <InternalName Value="hal.dll"/>
+                <FileVersion Value="10.0.14393.3297 (rs1_release_1.191001-1045)"/>
+                <ProductVersion Value="10.0.14393.3297"/>
+            </HAL>
+            <HALFiles/>
+            <Name Value="LP16A"/>
+            <Domain Value=""/>
+            <WindowsDeduplication Value="0"/>
+            <RDPEnabled Value="-1"/>
+            <HasBCDTemplate Value="-1"/>
+            <IsDC Value="0"/>
+            <OSVersionProductType Value="3"/>
+        </WindowsVersion>
+        <MachineInfo>
+            <CoreInfo/>
+            <NumProcessors Value="2"/>
+            <Type Value="9"/>
+            <PhysicalMemory Value="4095"/>
+            <BiosUUID Value="99573D42-555E-C771-EC1A-91C0F41DB1ED"/>
+            <Adapters>
+                <Adapter>
+                    <Name Value="{F6C85201-FECF-4344-8C08-E16289C8F8DB}"/>
+                    <FriendlyName Value="Ethernet0"/>
+                    <Description Value="Intel(R) 82574L Gigabit Network Connection"/>
+                    <PnpInstanceID Value="PCI&#x5C;VEN_8086&amp;DEV_10D3&amp;SUBSYS_07D015AD&amp;REV_00&#x5C;005056FFFFBDB43400"/>
+                    <ServiceName Value="e1iexpress"/>
+                    <!--MACAddress is a live data node only-->
+                    <MACAddress Value="005056BDA84E"/>
+                    <!--InterfaceIndex is a live data node only-->
+                    <InterfaceIndex Value="7"/>
+                    <!--ClassInstance is a live data node only-->
+                    <ClassInstance Value="0001"/>
+                    <IPs>
+                        <IP>
+                            <Address Value="10.6.135.195"/>
+                            <Subnet Value="255.255.254.0"/>
+                            <DHCP Value="0"/>
+                        </IP>
+                    </IPs>
+                    <NumIPs Value="1"/>
+                    <DNSServers>
+                        <Address Value="172.30.225.11"/>
+                    </DNSServers>
+                    <Gateway>
+                        <Address Value="10.6.134.1"/>
+                    </Gateway>
+                </Adapter>
+                <Adapter>
+                    <Name Value="{AD3443FB-8F70-4C24-B217-6BFB9BF4976B}"/>
+                    <FriendlyName Value="Ethernet1"/>
+                    <Description Value="Intel(R) 82574L Gigabit Network Connection #2"/>
+                    <PnpInstanceID Value="PCI&#x5C;VEN_8086&amp;DEV_10D3&amp;SUBSYS_07D015AD&amp;REV_00&#x5C;005056FFFFBDB43400"/>
+                    <ServiceName Value="e1iexpress"/>
+                    <!--MACAddress is a live data node only-->
+                    <MACAddress Value="005056BD4111"/>
+                    <!--InterfaceIndex is a live data node only-->
+                    <InterfaceIndex Value="6"/>
+                    <!--ClassInstance is a live data node only-->
+                    <ClassInstance Value="0004"/>
+                    <IPs>
+                        <IP>
+                            <Address Value="10.6.135.189"/>
+                            <Subnet Value="255.0.0.0"/>
+                            <DHCP Value="0"/>
+                        </IP>
+                    </IPs>
+                    <NumIPs Value="1"/>
+                    <DNSServers>
+                        <Address Value="172.30.225.11"/>
+                    </DNSServers>
+                    <Gateway>
+                        <Address Value="0.0.0.0"/>
+                    </Gateway>
+                </Adapter>
+                <NumNICs Value="2"/>
+                <NumIPs Value="2"/>
+            </Adapters>
+        </MachineInfo>
+        <Virtualization>
+            <HyperVHost>
+                <InsideVirtualPC Value="-1"/>
+            </HyperVHost>
+            <HyperVGuest>
+                <InsideVirtualPC Value="0"/>
+            </HyperVGuest>
+            <VMWareGuest>
+                <InsideVMWare Value="-1"/>
+            </VMWareGuest>
+            <XenGuest>
+                <InsideXen Value="0"/>
+            </XenGuest>
+            <InsideVMWare Value="-1"/>
+            <HasVMwareTools Value="-1"/>
+            <VMWareVersionMajor Value="6"/>
+            <AzureGuest>
+                <InsideAzure Value="0"/>
+            </AzureGuest>
+        </Virtualization>
+        <ServiceInfo>
+            <RunningAsSystem Value="-1"/>
+            <InstallDirectory Value="C:\Program Files\Carbonite\Replication"/>
+            <ProductVersion Value="8.5.5.31.0"/>
+            <ActivationCode Value="zuyk-663p-7btc-j3zw-0b5p-tp9h"/>
+            <NodeLockedServerInfo Value=""/>
+            <ReplicationEnabled Value="-1"/>
+        </ServiceInfo>
+    </Source>
+</Configuration>
