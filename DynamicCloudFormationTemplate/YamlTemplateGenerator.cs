@@ -1,20 +1,26 @@
 using System.Text;
+using DynamicCloudFormationTemplate.Interfaces;
 using DynamicCloudFormationTemplate.Models;
 
 namespace DynamicCloudFormationTemplate;
 
-internal static class YamlTemplateGenerator
+public class YamlTemplateGenerator : ICloudFormationGenerator
 {
-    public static string GenerateYaml(CloudformationInputs inputs, Dictionary<string, string> systemInfo)
+    private readonly EC2ConfigurationManager _ec2ConfigManager;
+
+    public YamlTemplateGenerator(string region)
+    {
+        _ec2ConfigManager = new EC2ConfigurationManager(region);
+    }
+
+    public async Task<string> GenerateTemplate(CloudformationInputs inputs)
+    {
+        return GenerateYaml(inputs);
+    }
+
+    private static string GenerateYaml(CloudformationInputs inputs)
     {
         var template = new StringBuilder();
-        
-        // Metadata section
-        template.AppendLine("Metadata:");
-        template.AppendLine("  SourceSystem:");
-        template.AppendLine($"    Memory: {systemInfo["MemoryInMB"]}");
-        template.AppendLine($"    Processors: {systemInfo["NumProcessors"]}");
-        template.AppendLine($"    WindowsVersion: {systemInfo["WindowsVersion"]}");
         
         template.AppendLine("AWSTemplateFormatVersion: '2010-09-09'");
         template.AppendLine("Description: 'AWS CloudFormation Template for VPC and Resources'");
@@ -47,7 +53,6 @@ internal static class YamlTemplateGenerator
         template.AppendLine("  Region:");
         template.AppendLine("    Type: String");
         template.AppendLine($"    Default: {inputs.Region}");
-        // Add more parameters as needed
         
         // Add Windows AMI parameter
         template.AppendLine("  WindowsAMI:");
@@ -102,29 +107,28 @@ internal static class YamlTemplateGenerator
         }
 
         // Security Groups resource
-        GenerateSecurityGroups(template, inputs.EC2Config.SecurityGroupRules);
+        GenerateSecurityGroups(template, inputs.EC2Config);
 
-        // Bastion Host resource if requested
-        if (inputs.CreateBastionHost)
+        // Generate EC2 instances for each server type
+        int instanceCounter = 1;
+        foreach (var serverConfig in inputs.EC2Config.Instances)
         {
-            GenerateBastionHost(template, inputs);
-        }
-
-        // Generate EC2 instances
-        for (int i = 0; i < inputs.EC2Config.InstanceCount; i++)
-        {
-            template.AppendLine($"  EC2Instance{i + 1}:");
-            template.AppendLine("    Type: 'AWS::EC2::Instance'");
-            template.AppendLine("    Properties:");
-            template.AppendLine("      ImageId: !Ref WindowsAMI");  // Use Windows AMI parameter
-            template.AppendLine($"      InstanceType: '{inputs.EC2Config.InstanceType}'");
-            template.AppendLine("      SubnetId: !Ref PublicSubnet1");
-            template.AppendLine("      SecurityGroupIds:");
-            template.AppendLine("        - !Ref EC2SecurityGroup");
-            template.AppendLine("      IamInstanceProfile: !Ref EC2InstanceProfile");
-            template.AppendLine("      Tags:");
-            template.AppendLine("        - Key: Name");
-            template.AppendLine($"          Value: WindowsInstance{i + 1}");
+            for (int i = 0; i < serverConfig.Count; i++)
+            {
+                template.AppendLine($"  {serverConfig.Name}{i + 1}:");
+                template.AppendLine("    Type: 'AWS::EC2::Instance'");
+                template.AppendLine("    Properties:");
+                template.AppendLine("      ImageId: !Ref WindowsAMI");
+                template.AppendLine($"      InstanceType: '{serverConfig.InstanceType}'");
+                template.AppendLine("      SubnetId: !Ref PublicSubnet1");
+                template.AppendLine("      SecurityGroupIds:");
+                template.AppendLine("        - !Ref EC2SecurityGroup");
+                template.AppendLine("      IamInstanceProfile: !Ref EC2InstanceProfile");
+                template.AppendLine("      Tags:");
+                template.AppendLine("        - Key: Name");
+                template.AppendLine($"          Value: {serverConfig.Name}-{i + 1}");
+                instanceCounter++;
+            }
         }
     }
 
@@ -198,6 +202,7 @@ internal static class YamlTemplateGenerator
 
     private static void GenerateIAMResources(StringBuilder template)
     {
+        // Create EC2 IAM Role
         template.AppendLine("  EC2IAMRole:");
         template.AppendLine("    Type: 'AWS::IAM::Role'");
         template.AppendLine("    Properties:");
@@ -210,10 +215,20 @@ internal static class YamlTemplateGenerator
         template.AppendLine("                - ec2.amazonaws.com");
         template.AppendLine("            Action:");
         template.AppendLine("              - sts:AssumeRole");
-        // ...additional IAM properties as needed...
+        template.AppendLine("      ManagedPolicyArns:");
+        template.AppendLine("        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore");
+        template.AppendLine("      Path: '/'");
+
+        // Create Instance Profile
+        template.AppendLine("  EC2InstanceProfile:");
+        template.AppendLine("    Type: 'AWS::IAM::InstanceProfile'");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      Path: '/'");
+        template.AppendLine("      Roles:");
+        template.AppendLine("        - !Ref EC2IAMRole");
     }
 
-    private static void GenerateSecurityGroups(StringBuilder template, List<SecurityGroupRule> rules)
+    private static void GenerateSecurityGroups(StringBuilder template, EC2Config ec2Config)
     {
         template.AppendLine("  EC2SecurityGroup:");
         template.AppendLine("    Type: 'AWS::EC2::SecurityGroup'");
@@ -221,28 +236,16 @@ internal static class YamlTemplateGenerator
         template.AppendLine("      GroupDescription: 'Security Group for EC2 instances'");
         template.AppendLine("      VpcId: !Ref MyVPC");
         template.AppendLine("      SecurityGroupIngress:");
-        foreach (var rule in rules)
+        
+        // Add SSH access rules for each allowed IP
+        foreach (var ip in ec2Config.AllowedSSHIps)
         {
-            template.AppendLine("        - IpProtocol: " + rule.Protocol);
-            template.AppendLine("          FromPort: " + rule.FromPort);
-            template.AppendLine("          ToPort: " + rule.ToPort);
-            template.AppendLine("          CidrIp: " + rule.CidrIp);
+            template.AppendLine("        - IpProtocol: tcp");
+            template.AppendLine("          FromPort: 22");
+            template.AppendLine("          ToPort: 22");
+            template.AppendLine($"          CidrIp: {ip}");
+            template.AppendLine($"          Description: 'SSH access from {ip}'");
         }
-    }
-
-    private static void GenerateBastionHost(StringBuilder template, CloudformationInputs inputs)
-    {
-        template.AppendLine("  BastionHost:");
-        template.AppendLine("    Type: 'AWS::EC2::Instance'");
-        template.AppendLine("    Properties:");
-        template.AppendLine("      ImageId: !Ref WindowsAMI");  // Use Windows AMI parameter
-        template.AppendLine($"      InstanceType: '{inputs.EC2Config.InstanceType}'");
-        template.AppendLine("      SubnetId: !Ref PublicSubnet1");
-        template.AppendLine("      SecurityGroupIds:");
-        template.AppendLine("        - !Ref EC2SecurityGroup");
-        template.AppendLine("      Tags:");
-        template.AppendLine("        - Key: Name");
-        template.AppendLine("          Value: BastionHost");
     }
 
     private static void GenerateOutputs(StringBuilder template, CloudformationInputs inputs)
@@ -250,11 +253,7 @@ internal static class YamlTemplateGenerator
         template.AppendLine("Outputs:");
         template.AppendLine("  VpcId:");
         template.AppendLine("    Value: !Ref MyVPC");
-        if (inputs.CreateBastionHost)
-        {
-            template.AppendLine("  BastionPublicIP:");
-            template.AppendLine("    Value: !GetAtt BastionHost.PublicIp");
-        }
+       
     }
 
     private static void GenerateIAMPermissions(StringBuilder template)
@@ -331,4 +330,5 @@ internal static class YamlTemplateGenerator
         template.AppendLine("      Roles:");
         template.AppendLine("        - !Ref VPCFullAccessRole");
     }
+
 }

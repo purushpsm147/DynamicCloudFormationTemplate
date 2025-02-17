@@ -29,6 +29,8 @@ public class ValidateEc2Configurations : IDisposable
         }
     }
 
+
+    //Not required
     public async Task<bool> ValidateInstanceType(string instanceType)
     {
         if (string.IsNullOrWhiteSpace(instanceType))
@@ -50,6 +52,7 @@ public class ValidateEc2Configurations : IDisposable
         }
     }
 
+    //Not required
     public async Task<bool> ValidateAmiId(string amiId)
     {
         if (string.IsNullOrWhiteSpace(amiId))
@@ -78,15 +81,23 @@ public class ValidateEc2Configurations : IDisposable
         try
         {
             string[] parts = cidr.Split('/');
-            if (parts.Length != 2) return false;
+            if (parts.Length != 2) 
+            {
+                return false;
+            }
 
             // Validate IP part
             string[] ipParts = parts[0].Split('.');
-            if (ipParts.Length != 4) return false;
+            if (ipParts.Length != 4) 
+            {
+                return false;
+            }
 
             // Validate subnet mask
             if (!int.TryParse(parts[1], out int mask) || mask < 16 || mask > 28)
+            {
                 return false;
+            }
 
             return true;
         }

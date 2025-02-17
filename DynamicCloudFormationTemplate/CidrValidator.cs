@@ -75,4 +75,31 @@ public class CidrValidator
 
         return suggestions;
     }
+
+    public List<string> SuggestSubnetCidrs(string vpcCidr, int count, int offset = 0)
+    {
+        var suggestions = new List<string>();
+        string[] vpcParts = vpcCidr.Split('/');
+        IPAddress vpcIp = IPAddress.Parse(vpcParts[0]);
+        int vpcMask = int.Parse(vpcParts[1]);
+
+        // Get the VPC network address
+        byte[] vpcBytes = vpcIp.GetAddressBytes();
+        uint vpcAddr = BitConverter.ToUInt32(vpcBytes.Reverse().ToArray(), 0);
+        uint vpcNetwork = vpcAddr & (uint.MaxValue << (32 - vpcMask));
+
+        // Calculate subnet mask (VPC mask + 4 to create subnets)
+        int subnetMask = Math.Min(vpcMask + 4, 28);
+        uint subnetSize = 1u << (32 - subnetMask);
+
+        for (int i = 0; i < count; i++)
+        {
+            uint subnetAddr = vpcNetwork + (subnetSize * (uint)(i + offset));
+            byte[] subnetBytes = BitConverter.GetBytes(subnetAddr).Reverse().ToArray();
+            var subnetIp = new IPAddress(subnetBytes);
+            suggestions.Add($"{subnetIp}/{subnetMask}");
+        }
+
+        return suggestions;
+    }
 }
