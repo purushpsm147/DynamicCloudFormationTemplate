@@ -42,6 +42,7 @@ internal class Program
             string outputPath = "cloudformation-template.yaml";
             await File.WriteAllTextAsync(outputPath, yaml);
             Console.WriteLine($"Template generated successfully: {outputPath}");
+            Console.WriteLine("When creating the stack, make sure to include --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM");
         }
         catch (Exception ex)
         {
@@ -78,6 +79,9 @@ internal class Program
             Protocol = "tcp",
             CidrIp = sshIp
         });
+
+        // Add role configuration
+        inputs.EC2Config.EnableSSMRole = true;
 
         return true;
     }

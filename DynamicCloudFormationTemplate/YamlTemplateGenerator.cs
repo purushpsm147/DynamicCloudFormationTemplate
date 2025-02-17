@@ -24,6 +24,11 @@ internal static class YamlTemplateGenerator
         
         // Resources section
         template.AppendLine("Resources:");
+        
+        // Add IAM Role first
+        GenerateIAMPermissions(template);
+        
+        // Then generate other resources
         GenerateVpcResources(template, inputs);
         
         if (inputs.EC2Config != null)
@@ -43,13 +48,19 @@ internal static class YamlTemplateGenerator
         template.AppendLine("    Type: String");
         template.AppendLine($"    Default: {inputs.Region}");
         // Add more parameters as needed
+        
+        // Add Windows AMI parameter
+        template.AppendLine("  WindowsAMI:");
+        template.AppendLine("    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>");
+        template.AppendLine("    Default: /aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base");
+        template.AppendLine("    Description: Windows Server AMI from SSM Parameter Store");
     }
 
     private static void GenerateVpcResources(StringBuilder template, CloudformationInputs inputs)
     {
-        // VPC
         template.AppendLine("  MyVPC:");
         template.AppendLine("    Type: 'AWS::EC2::VPC'");
+        template.AppendLine("    DependsOn: CloudFormationServiceRole");
         template.AppendLine("    Properties:");
         template.AppendLine($"      CidrBlock: {inputs.VpcConfig.VpcCidr}");
         template.AppendLine("      EnableDnsHostnames: true");
@@ -98,12 +109,30 @@ internal static class YamlTemplateGenerator
         {
             GenerateBastionHost(template, inputs);
         }
+
+        // Generate EC2 instances
+        for (int i = 0; i < inputs.EC2Config.InstanceCount; i++)
+        {
+            template.AppendLine($"  EC2Instance{i + 1}:");
+            template.AppendLine("    Type: 'AWS::EC2::Instance'");
+            template.AppendLine("    Properties:");
+            template.AppendLine("      ImageId: !Ref WindowsAMI");  // Use Windows AMI parameter
+            template.AppendLine($"      InstanceType: '{inputs.EC2Config.InstanceType}'");
+            template.AppendLine("      SubnetId: !Ref PublicSubnet1");
+            template.AppendLine("      SecurityGroupIds:");
+            template.AppendLine("        - !Ref EC2SecurityGroup");
+            template.AppendLine("      IamInstanceProfile: !Ref EC2InstanceProfile");
+            template.AppendLine("      Tags:");
+            template.AppendLine("        - Key: Name");
+            template.AppendLine($"          Value: WindowsInstance{i + 1}");
+        }
     }
 
     private static void GenerateInternetGatewayResources(StringBuilder template)
     {
         template.AppendLine("  MyIGW:");
         template.AppendLine("    Type: 'AWS::EC2::InternetGateway'");
+        template.AppendLine("    DependsOn: MyVPC");
         template.AppendLine("    Properties:");
         template.AppendLine("      Tags:");
         template.AppendLine("        - Key: Name");
@@ -147,13 +176,24 @@ internal static class YamlTemplateGenerator
     {
         template.AppendLine("  NatEIP:");
         template.AppendLine("    Type: 'AWS::EC2::EIP'");
+        template.AppendLine("    DependsOn: CloudFormationServiceRole");
         template.AppendLine("    Properties:");
         template.AppendLine("      Domain: vpc");
+        template.AppendLine("      Tags:");
+        template.AppendLine("        - Key: Name");
+        template.AppendLine("          Value: NatGateway-EIP");
+
         template.AppendLine("  NatGateway:");
         template.AppendLine("    Type: 'AWS::EC2::NatGateway'");
+        template.AppendLine("    DependsOn:");
+        template.AppendLine("      - NatEIP");
+        template.AppendLine("      - PublicSubnet1");
         template.AppendLine("    Properties:");
         template.AppendLine("      AllocationId: !GetAtt NatEIP.AllocationId");
         template.AppendLine("      SubnetId: !Ref PublicSubnet1");
+        template.AppendLine("      Tags:");
+        template.AppendLine("        - Key: Name");
+        template.AppendLine("          Value: MainNatGateway");
     }
 
     private static void GenerateIAMResources(StringBuilder template)
@@ -195,7 +235,7 @@ internal static class YamlTemplateGenerator
         template.AppendLine("  BastionHost:");
         template.AppendLine("    Type: 'AWS::EC2::Instance'");
         template.AppendLine("    Properties:");
-        template.AppendLine("      ImageId: 'ami-xxxxxxxx'  # Replace with a valid AMI or parameter reference");
+        template.AppendLine("      ImageId: !Ref WindowsAMI");  // Use Windows AMI parameter
         template.AppendLine($"      InstanceType: '{inputs.EC2Config.InstanceType}'");
         template.AppendLine("      SubnetId: !Ref PublicSubnet1");
         template.AppendLine("      SecurityGroupIds:");
@@ -215,5 +255,80 @@ internal static class YamlTemplateGenerator
             template.AppendLine("  BastionPublicIP:");
             template.AppendLine("    Value: !GetAtt BastionHost.PublicIp");
         }
+    }
+
+    private static void GenerateIAMPermissions(StringBuilder template)
+    {
+        // Create CloudFormation service role first
+        template.AppendLine("  CloudFormationServiceRole:");
+        template.AppendLine("    Type: 'AWS::IAM::Role'");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      AssumeRolePolicyDocument:");
+        template.AppendLine("        Version: '2012-10-17'");
+        template.AppendLine("        Statement:");
+        template.AppendLine("          - Effect: Allow");
+        template.AppendLine("            Principal:");
+        template.AppendLine("              Service: cloudformation.amazonaws.com");
+        template.AppendLine("            Action: sts:AssumeRole");
+        template.AppendLine("      ManagedPolicyArns:");
+        template.AppendLine("        - arn:aws:iam::aws:policy/AmazonVPCFullAccess");
+        template.AppendLine("      Path: '/'");
+        template.AppendLine("      Policies:");
+        template.AppendLine("        - PolicyName: CloudFormationFullAccess");
+        template.AppendLine("          PolicyDocument:");
+        template.AppendLine("            Version: '2012-10-17'");
+        template.AppendLine("            Statement:");
+        template.AppendLine("              - Effect: Allow");
+        template.AppendLine("                Action:");
+        template.AppendLine("                  - 'ec2:*'");
+        template.AppendLine("                  - 'cloudformation:*'");
+        template.AppendLine("                  - 'iam:*'");
+        template.AppendLine("                Resource: '*'");
+
+        // Then create VPC role that will be used by resources
+        template.AppendLine("  VPCFullAccessRole:");
+        template.AppendLine("    Type: 'AWS::IAM::Role'");
+        template.AppendLine("    DependsOn: CloudFormationServiceRole");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      AssumeRolePolicyDocument:");
+        template.AppendLine("        Version: '2012-10-17'");
+        template.AppendLine("        Statement:");
+        template.AppendLine("          - Effect: Allow");
+        template.AppendLine("            Principal:");
+        template.AppendLine("              Service:");
+        template.AppendLine("                - ec2.amazonaws.com");
+        template.AppendLine("                - cloudformation.amazonaws.com");
+        template.AppendLine("            Action: sts:AssumeRole");
+        template.AppendLine("      Path: '/'");
+        template.AppendLine("      Policies:");
+        template.AppendLine("        - PolicyName: VPCFullAccess");
+        template.AppendLine("          PolicyDocument:");
+        template.AppendLine("            Version: '2012-10-17'");
+        template.AppendLine("            Statement:");
+        template.AppendLine("              - Effect: Allow");
+        template.AppendLine("                Action:");
+        template.AppendLine("                  - 'ec2:*VPC*'");
+        template.AppendLine("                  - 'ec2:*Subnet*'");
+        template.AppendLine("                  - 'ec2:*Gateway*'");
+        template.AppendLine("                  - 'ec2:*Route*'");
+        template.AppendLine("                  - 'ec2:*Address*'");
+        template.AppendLine("                  - 'ec2:*NetworkAcl*'");
+        template.AppendLine("                  - 'ec2:*SecurityGroup*'");
+        template.AppendLine("                  - 'ec2:AllocateAddress'");
+        template.AppendLine("                  - 'ec2:ReleaseAddress'");
+        template.AppendLine("                  - 'ec2:AssociateAddress'");
+        template.AppendLine("                  - 'ec2:DisassociateAddress'");
+        template.AppendLine("                  - 'ec2:CreateNatGateway'");
+        template.AppendLine("                  - 'ec2:DeleteNatGateway'");
+        template.AppendLine("                  - 'ec2:DescribeNatGateways'");
+        template.AppendLine("                Resource: '*'");
+
+        // Add instance profile
+        template.AppendLine("  VPCFullAccessInstanceProfile:");
+        template.AppendLine("    Type: 'AWS::IAM::InstanceProfile'");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      Path: '/'");
+        template.AppendLine("      Roles:");
+        template.AppendLine("        - !Ref VPCFullAccessRole");
     }
 }

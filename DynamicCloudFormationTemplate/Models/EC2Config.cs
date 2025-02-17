@@ -7,4 +7,5 @@ public class EC2Config
     public string KeyPairName { get; set; }
     public bool EnableSSMRole { get; set; } = true;
     public List<SecurityGroupRule> SecurityGroupRules { get; set; } = new();
+    public int InstanceCount { get; set; } = 1;
 }

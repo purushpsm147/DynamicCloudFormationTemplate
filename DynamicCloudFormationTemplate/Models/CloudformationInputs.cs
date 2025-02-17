@@ -7,4 +7,5 @@ public class CloudformationInputs
     public EC2Config EC2Config { get; set; } = new();
     public bool CreateBastionHost { get; set; }
     public string ResourceTag { get; set; } = "from-cft";
+    // Remove IamRoleArn property since we're creating the role in the template
 }

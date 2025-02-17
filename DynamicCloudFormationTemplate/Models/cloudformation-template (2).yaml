@@ -1,0 +1,164 @@
+Metadata:
+  SourceSystem:
+    Memory: 4095
+    Processors: 2
+    WindowsVersion: 2016
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template for VPC and Resources'
+Parameters:
+  Region:
+    Type: String
+    Default: us-east-1
+Resources:
+  CloudFormationServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonVPCFullAccess
+      Path: '/'
+      Policies:
+        - PolicyName: CloudFormationFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:*'
+                  - 'cloudformation:*'
+                  - 'iam:*'
+                Resource: '*'
+  VPCFullAccessRole:
+    Type: 'AWS::IAM::Role'
+    DependsOn: CloudFormationServiceRole
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: VPCFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:*VPC*'
+                  - 'ec2:*Subnet*'
+                  - 'ec2:*Gateway*'
+                  - 'ec2:*Route*'
+                  - 'ec2:*Address*'
+                  - 'ec2:*NetworkAcl*'
+                  - 'ec2:*SecurityGroup*'
+                  - 'ec2:AllocateAddress'
+                  - 'ec2:ReleaseAddress'
+                  - 'ec2:AssociateAddress'
+                  - 'ec2:DisassociateAddress'
+                  - 'ec2:CreateNatGateway'
+                  - 'ec2:DeleteNatGateway'
+                  - 'ec2:DescribeNatGateways'
+                Resource: '*'
+  VPCFullAccessInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: '/'
+      Roles:
+        - !Ref VPCFullAccessRole
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    DependsOn: CloudFormationServiceRole
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: MyVPC
+  MyIGW:
+    Type: 'AWS::EC2::InternetGateway'
+    DependsOn: MyVPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MyIGW
+  IGWAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyIGW
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.88.135.144/28
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet1
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.88.134.144/12
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet1
+  NatEIP:
+    Type: 'AWS::EC2::EIP'
+    DependsOn: CloudFormationServiceRole
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: NatGateway-EIP
+  NatGateway:
+    Type: 'AWS::EC2::NatGateway'
+    DependsOn:
+      - NatEIP
+      - PublicSubnet1
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: MainNatGateway
+  EC2IAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  EC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security Group for EC2 instances'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 172.12.1.1
+Outputs:
+  VpcId:
+    Value: !Ref MyVPC
