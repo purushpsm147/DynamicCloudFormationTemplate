@@ -77,23 +77,32 @@ public class YamlTemplateGenerator : ICloudFormationGenerator
         // Internet Gateway Resources
         GenerateInternetGatewayResources(template);
 
+        // Generate Route Tables
+        GeneratePublicRouteTable(template);
+
         // Public Subnets
         foreach (var subnet in inputs.VpcConfig.PublicSubnets)
         {
             GeneratePublicSubnet(template, subnet);
+            GeneratePublicSubnetRouteTableAssociation(template, subnet);
         }
 
         // Private Subnets and NAT Gateway if needed
         if (inputs.VpcConfig.CreatePrivateSubnets)
         {
-            foreach (var subnet in inputs.VpcConfig.PrivateSubnets)
-            {
-                GeneratePrivateSubnet(template, subnet);
-            }
-
             if (inputs.VpcConfig.CreateNatGateway)
             {
                 GenerateNatGatewayResources(template);
+                GeneratePrivateRouteTable(template);
+            }
+
+            foreach (var subnet in inputs.VpcConfig.PrivateSubnets)
+            {
+                GeneratePrivateSubnet(template, subnet);
+                if (inputs.VpcConfig.CreateNatGateway)
+                {
+                    GeneratePrivateSubnetRouteTableAssociation(template, subnet);
+                }
             }
         }
     }
@@ -329,6 +338,64 @@ public class YamlTemplateGenerator : ICloudFormationGenerator
         template.AppendLine("      Path: '/'");
         template.AppendLine("      Roles:");
         template.AppendLine("        - !Ref VPCFullAccessRole");
+    }
+
+    private static void GeneratePublicRouteTable(StringBuilder template)
+    {
+        template.AppendLine("  PublicRouteTable:");
+        template.AppendLine("    Type: 'AWS::EC2::RouteTable'");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      VpcId: !Ref MyVPC");
+        template.AppendLine("      Tags:");
+        template.AppendLine("        - Key: Name");
+        template.AppendLine("          Value: Public Route Table");
+
+        // Add route to Internet Gateway
+        template.AppendLine("  PublicRoute:");
+        template.AppendLine("    Type: 'AWS::EC2::Route'");
+        template.AppendLine("    DependsOn: IGWAttachment");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      RouteTableId: !Ref PublicRouteTable");
+        template.AppendLine("      DestinationCidrBlock: 0.0.0.0/0");
+        template.AppendLine("      GatewayId: !Ref MyIGW");
+    }
+
+    private static void GeneratePrivateRouteTable(StringBuilder template)
+    {
+        template.AppendLine("  PrivateRouteTable:");
+        template.AppendLine("    Type: 'AWS::EC2::RouteTable'");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      VpcId: !Ref MyVPC");
+        template.AppendLine("      Tags:");
+        template.AppendLine("        - Key: Name");
+        template.AppendLine("          Value: Private Route Table");
+
+        // Add route to NAT Gateway
+        template.AppendLine("  PrivateRoute:");
+        template.AppendLine("    Type: 'AWS::EC2::Route'");
+        template.AppendLine("    DependsOn: NatGateway");
+        template.AppendLine("    Properties:");
+        template.AppendLine("      RouteTableId: !Ref PrivateRouteTable");
+        template.AppendLine("      DestinationCidrBlock: 0.0.0.0/0");
+        template.AppendLine("      NatGatewayId: !Ref NatGateway");
+    }
+
+    private static void GeneratePublicSubnetRouteTableAssociation(StringBuilder template, SubnetConfig subnet)
+    {
+        template.AppendLine($"  PublicSubnet{subnet.AvailabilityZoneIndex + 1}RouteTableAssociation:");
+        template.AppendLine("    Type: 'AWS::EC2::SubnetRouteTableAssociation'");
+        template.AppendLine("    Properties:");
+        template.AppendLine($"      SubnetId: !Ref PublicSubnet{subnet.AvailabilityZoneIndex + 1}");
+        template.AppendLine("      RouteTableId: !Ref PublicRouteTable");
+    }
+
+    private static void GeneratePrivateSubnetRouteTableAssociation(StringBuilder template, SubnetConfig subnet)
+    {
+        template.AppendLine($"  PrivateSubnet{subnet.AvailabilityZoneIndex + 1}RouteTableAssociation:");
+        template.AppendLine("    Type: 'AWS::EC2::SubnetRouteTableAssociation'");
+        template.AppendLine("    Properties:");
+        template.AppendLine($"      SubnetId: !Ref PrivateSubnet{subnet.AvailabilityZoneIndex + 1}");
+        template.AppendLine("      RouteTableId: !Ref PrivateRouteTable");
     }
 
 }
